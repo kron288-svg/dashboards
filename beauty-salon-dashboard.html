@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beauty Salon Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --pink:   #D4608A;
+    --purple: #9B6FD4;
+    --green:  #1D9E75;
+    --red:    #E05252;
+    --orange: #F5A623;
+    --rose:   #F28BAD;
+    --bg:     #FDF6F9;
+    --card:   #FFFFFF;
+    --border: #EDE0E8;
+    --text:   #2D1B2E;
+    --muted:  #8A6A7A;
+    --radius: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,.07);
+  }
+  body { font-family:system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); font-size:14px; min-height:100vh; }
+
+  header {
+    background:var(--card); border-bottom:1px solid var(--border);
+    padding:0 24px; display:flex; align-items:center; justify-content:space-between;
+    height:60px; position:sticky; top:0; z-index:200;
+  }
+  .brand { display:flex; align-items:center; gap:10px; }
+  .brand-icon { width:32px;height:32px;background:var(--pink);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px; }
+  .brand-name { font-weight:700; font-size:16px; }
+  .brand-sub  { font-size:11px; color:var(--muted); }
+  .header-right { display:flex; align-items:center; gap:12px; }
+  .period-tabs { display:flex; gap:4px; }
+  .period-btn {
+    padding:6px 14px; border:1px solid var(--border); background:transparent;
+    border-radius:var(--radius); cursor:pointer; font-size:13px; color:var(--muted); transition:all .15s;
+  }
+  .period-btn:hover { border-color:var(--pink); color:var(--pink); }
+  .period-btn.active { background:var(--pink); border-color:var(--pink); color:#fff; font-weight:600; }
+  .edit-btn {
+    padding:6px 14px; border:1px solid var(--orange); background:transparent;
+    border-radius:var(--radius); cursor:pointer; font-size:13px; color:var(--orange);
+    font-weight:600; transition:all .15s; white-space:nowrap;
+  }
+  .edit-btn:hover { background:var(--orange); color:#fff; }
+
+  main { max-width:1280px; margin:0 auto; padding:24px 20px; }
+  .section-title { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px; }
+
+  .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+  .kpi-card { background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow); }
+  .kpi-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:12px; }
+  .kpi-label { font-size:12px;color:var(--muted);font-weight:500; }
+  .kpi-icon  { font-size:18px; }
+  .kpi-value { font-size:26px;font-weight:700;line-height:1;margin-bottom:8px; }
+  .kpi-delta { display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600; }
+  .kpi-delta.up   { color:var(--green); }
+  .kpi-delta.down { color:var(--red); }
+  .kpi-delta-label { color:var(--muted);font-weight:400;margin-left:2px; }
+
+  .charts-row { display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px; }
+  .chart-card { background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow); }
+  .chart-card-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:16px; }
+  .chart-title { font-size:14px;font-weight:600; }
+  .chart-legend { display:flex;gap:16px; }
+  .legend-item { display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted); }
+  .legend-dot  { width:8px;height:8px;border-radius:50%; }
+  .chart-wrap  { position:relative;height:220px; }
+
+  .bottom-row { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
+  .table-card,.funnel-card { background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow); }
+  .top-table { width:100%;border-collapse:collapse; }
+  .top-table th { text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:0 0 10px;border-bottom:1px solid var(--border); }
+  .top-table th:not(:first-child) { text-align:right; }
+  .top-table td { padding:10px 0;border-bottom:1px solid var(--border);vertical-align:middle; }
+  .top-table tr:last-child td { border-bottom:none; }
+  .top-table td:not(:first-child) { text-align:right; }
+  .service-name { font-weight:500;font-size:13px; }
+  .service-cat  { font-size:11px;color:var(--muted);margin-top:2px; }
+  .progress-wrap { display:flex;align-items:center;gap:8px;justify-content:flex-end; }
+  .progress-bar-bg { width:60px;height:5px;background:var(--border);border-radius:99px;overflow:hidden; }
+  .progress-bar-fill { height:100%;background:var(--pink);border-radius:99px;transition:width .4s; }
+  .rank-badge { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:11px;font-weight:700;background:var(--bg);color:var(--muted);border:1px solid var(--border);margin-right:8px; }
+  .rank-badge.gold   { background:#FFF8E1;color:#F5A623;border-color:#F5A623; }
+  .rank-badge.silver { background:#F5F5F5;color:#9E9E9E;border-color:#BDBDBD; }
+  .rank-badge.bronze { background:#FBE9E7;color:#BF6B4A;border-color:#BF6B4A; }
+
+  .funnel-row  { margin-bottom:14px; }
+  .funnel-meta { display:flex;justify-content:space-between;margin-bottom:5px; }
+  .funnel-stage { font-size:13px;font-weight:500; }
+  .funnel-val   { font-size:13px;font-weight:600; }
+  .funnel-bar-bg { height:8px;background:var(--border);border-radius:99px;overflow:hidden; }
+  .funnel-bar-fill { height:100%;border-radius:99px;transition:width .4s; }
+
+  /* EDITOR */
+  .overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:300;align-items:flex-start;justify-content:flex-end; }
+  .overlay.open { display:flex; }
+  .editor-panel { background:#fff;width:420px;max-width:100vw;height:100vh;overflow-y:auto;display:flex;flex-direction:column;box-shadow:-4px 0 24px rgba(0,0,0,.12); }
+  .editor-header { padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:10; }
+  .editor-title { font-size:15px;font-weight:700; }
+  .editor-period-badge { font-size:11px;font-weight:600;background:var(--pink);color:#fff;padding:3px 8px;border-radius:99px; }
+  .close-btn { background:none;border:none;cursor:pointer;font-size:20px;color:var(--muted);line-height:1;padding:4px; }
+  .close-btn:hover { color:var(--text); }
+  .editor-body { padding:20px;flex:1; }
+  .editor-section { margin-bottom:24px; }
+  .editor-section-title { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid var(--border); }
+  .field-row { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px; }
+  .field-row.single { grid-template-columns:1fr; }
+  .field-group { display:flex;flex-direction:column;gap:4px; }
+  .field-label { font-size:11px;font-weight:600;color:var(--muted); }
+  .field-input { padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--text);font-family:inherit;transition:border-color .15s;background:#fff; }
+  .field-input:focus { outline:none;border-color:var(--pink); }
+  .item-editor { background:var(--bg);border-radius:6px;padding:12px;margin-bottom:10px; }
+  .item-editor-title { font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text); }
+  .editor-footer { padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:10px;position:sticky;bottom:0;background:#fff; }
+  .apply-btn { flex:1;padding:10px;background:var(--pink);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;transition:opacity .15s; }
+  .apply-btn:hover { opacity:.88; }
+  .reset-btn { padding:10px 16px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;font-size:13px;font-family:inherit;transition:all .15s; }
+  .reset-btn:hover { border-color:var(--red);color:var(--red); }
+  .toast { position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#2D1B2E;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;transition:transform .3s ease;pointer-events:none; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+
+  @media(max-width:900px){ .kpi-grid{grid-template-columns:repeat(2,1fr);} .charts-row{grid-template-columns:1fr;} .bottom-row{grid-template-columns:1fr;} }
+  @media(max-width:600px){ .editor-panel{width:100vw;} .period-btn{padding:5px 8px;font-size:12px;} .brand-sub{display:none;} header{padding:0 12px;} main{padding:16px 12px;} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">✂️</div>
+    <div>
+      <div class="brand-name">BeautyMetrics</div>
+      <div class="brand-sub">Аналитика салона красоты</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="period-tabs">
+      <button class="period-btn" data-period="7d">7 дней</button>
+      <button class="period-btn active" data-period="30d">30 дней</button>
+      <button class="period-btn" data-period="90d">90 дней</button>
+      <button class="period-btn" data-period="1y">Год</button>
+    </div>
+    <button class="edit-btn" id="openEditor">✏️ Редактировать</button>
+  </div>
+</header>
+
+<main>
+  <div class="section-title">Ключевые показатели</div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-header"><span class="kpi-label">Выручка</span><span class="kpi-icon">💰</span></div>
+      <div class="kpi-value" id="kpi-revenue">—</div>
+      <div class="kpi-delta" id="kpi-revenue-delta">
+        <span id="kpi-revenue-arrow"></span><span id="kpi-revenue-pct"></span>
+        <span class="kpi-delta-label">vs прошлый период</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-header"><span class="kpi-label">Визиты клиентов</span><span class="kpi-icon">💇</span></div>
+      <div class="kpi-value" id="kpi-visits">—</div>
+      <div class="kpi-delta" id="kpi-visits-delta">
+        <span id="kpi-visits-arrow"></span><span id="kpi-visits-pct"></span>
+        <span class="kpi-delta-label">vs прошлый период</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-header"><span class="kpi-label">Средний чек</span><span class="kpi-icon">🧾</span></div>
+      <div class="kpi-value" id="kpi-aov">—</div>
+      <div class="kpi-delta" id="kpi-aov-delta">
+        <span id="kpi-aov-arrow"></span><span id="kpi-aov-pct"></span>
+        <span class="kpi-delta-label">vs прошлый период</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-header"><span class="kpi-label">Возвратность</span><span class="kpi-icon">❤️</span></div>
+      <div class="kpi-value" id="kpi-retention">—</div>
+      <div class="kpi-delta" id="kpi-retention-delta">
+        <span id="kpi-retention-arrow"></span><span id="kpi-retention-pct"></span>
+        <span class="kpi-delta-label">vs прошлый период</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <span class="chart-title">Выручка и визиты</span>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--pink)"></div>Выручка</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Визиты</div>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-header"><span class="chart-title">Направления услуг</span></div>
+      <div class="chart-wrap"><canvas id="donutChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="bottom-row">
+    <div class="table-card">
+      <div class="chart-card-header"><span class="chart-title">Топ-5 услуг</span></div>
+      <table class="top-table">
+        <thead><tr><th>Услуга</th><th>Записей</th><th>Выручка</th><th>Доля</th></tr></thead>
+        <tbody id="topTableBody"></tbody>
+      </table>
+    </div>
+    <div class="funnel-card">
+      <div class="chart-card-header"><span class="chart-title">Загрузка мастеров</span></div>
+      <div id="funnelList" style="margin-top:8px"></div>
+    </div>
+  </div>
+</main>
+
+<!-- EDITOR -->
+<div class="overlay" id="overlay">
+  <div class="editor-panel">
+    <div class="editor-header">
+      <div><div class="editor-title">Редактор данных</div></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="editor-period-badge" id="editorPeriodBadge">30 дней</span>
+        <button class="close-btn" id="closeEditor">✕</button>
+      </div>
+    </div>
+    <div class="editor-body">
+
+      <div class="editor-section">
+        <div class="editor-section-title">📊 KPI — Ключевые показатели</div>
+        <div class="field-row">
+          <div class="field-group"><label class="field-label">Выручка (₽)</label><input class="field-input" id="e-revenue" type="number"></div>
+          <div class="field-group"><label class="field-label">Дельта (%)</label><input class="field-input" id="e-revenue-delta" type="number" step="0.1"></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group"><label class="field-label">Визиты (шт)</label><input class="field-input" id="e-visits" type="number"></div>
+          <div class="field-group"><label class="field-label">Дельта (%)</label><input class="field-input" id="e-visits-delta" type="number" step="0.1"></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group"><label class="field-label">Средний чек (₽)</label><input class="field-input" id="e-aov" type="number"></div>
+          <div class="field-group"><label class="field-label">Дельта (%)</label><input class="field-input" id="e-aov-delta" type="number" step="0.1"></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group"><label class="field-label">Возвратность (%)</label><input class="field-input" id="e-retention" type="number" step="0.1"></div>
+          <div class="field-group"><label class="field-label">Дельта (%)</label><input class="field-input" id="e-retention-delta" type="number" step="0.1"></div>
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <div class="editor-section-title">💇 Направления услуг (%)</div>
+        <div class="field-row">
+          <div class="field-group"><label class="field-label">Волосы</label><input class="field-input" id="e-ch0" type="number"></div>
+          <div class="field-group"><label class="field-label">Маникюр/педикюр</label><input class="field-input" id="e-ch1" type="number"></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group"><label class="field-label">Косметология</label><input class="field-input" id="e-ch2" type="number"></div>
+          <div class="field-group"><label class="field-label">Макияж</label><input class="field-input" id="e-ch3" type="number"></div>
+        </div>
+        <div class="field-row single">
+          <div class="field-group"><label class="field-label">Массаж/СПА</label><input class="field-input" id="e-ch4" type="number"></div>
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <div class="editor-section-title">✂️ Топ-5 услуг</div>
+        <div id="servicesEditor"></div>
+      </div>
+
+      <div class="editor-section">
+        <div class="editor-section-title">👩‍💼 Загрузка мастеров</div>
+        <div id="funnelEditor"></div>
+      </div>
+
+    </div>
+    <div class="editor-footer">
+      <button class="reset-btn" id="resetBtn">↺ Сброс</button>
+      <button class="apply-btn" id="applyBtn">✓ Применить изменения</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">✓ Данные обновлены</div>
+
+<script>
+const DEFAULT_DATA = {
+  '7d': {
+    kpi: {
+      revenue:   { value: 184600, delta: 7.2  },
+      visits:    { value: 312,    delta: 4.8  },
+      aov:       { value: 2840,   delta: 2.4  },
+      retention: { value: 68.4,   delta: 1.2  },
+    },
+    line: {
+      labels:  ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
+      revenue: [21400,24800,22600,31200,38400,29800,16400],
+      visits:  [38,44,40,55,68,52,29],
+    },
+    donut: {
+      labels: ['Волосы','Маникюр/педикюр','Косметология','Макияж','Массаж/СПА'],
+      values: [38,24,18,12,8],
+    },
+    services: [
+      { name:'Окрашивание волос',         cat:'Волосы',              bookings:48,  revenue:57600,  share:100 },
+      { name:'Стрижка + укладка',         cat:'Волосы',              bookings:62,  revenue:43400,  share:75  },
+      { name:'Маникюр гель',              cat:'Ногти',               bookings:71,  revenue:35500,  share:62  },
+      { name:'Кератиновое выпрямление',   cat:'Уход за волосами',    bookings:29,  revenue:29000,  share:50  },
+      { name:'Макияж вечерний',           cat:'Макияж',              bookings:24,  revenue:19200,  share:33  },
+    ],
+    funnel: [
+      { stage:'Всего мастеров',    value:18, pct:100, color:'#D4608A' },
+      { stage:'Работают сегодня',  value:14, pct:78,  color:'#9B6FD4' },
+      { stage:'Записано на неделю',value:11, pct:61,  color:'#F5A623' },
+      { stage:'Свободны сейчас',   value:4,  pct:22,  color:'#1D9E75' },
+      { stage:'В отпуске',         value:2,  pct:11,  color:'#E05252' },
+    ],
+  },
+  '30d': {
+    kpi: {
+      revenue:   { value: 842000, delta: 11.4 },
+      visits:    { value: 1384,   delta: 8.7  },
+      aov:       { value: 2960,   delta: 2.8  },
+      retention: { value: 71.2,   delta: 2.1  },
+    },
+    line: {
+      labels:  ['1','3','5','7','9','11','13','15','17','19','21','23','25','27','30'],
+      revenue: [24000,28000,31000,26000,38000,42000,35000,48000,44000,52000,49000,58000,54000,62000,51000],
+      visits:  [42,48,54,46,66,72,61,83,76,90,85,100,93,107,88],
+    },
+    donut: {
+      labels: ['Волосы','Маникюр/педикюр','Косметология','Макияж','Массаж/СПА'],
+      values: [36,25,19,13,7],
+    },
+    services: [
+      { name:'Окрашивание волос',         cat:'Волосы',              bookings:214, revenue:256800, share:100 },
+      { name:'Стрижка + укладка',         cat:'Волосы',              bookings:278, revenue:194600, share:76  },
+      { name:'Маникюр гель',              cat:'Ногти',               bookings:312, revenue:156000, share:61  },
+      { name:'Кератиновое выпрямление',   cat:'Уход за волосами',    bookings:128, revenue:128000, share:50  },
+      { name:'Макияж вечерний',           cat:'Макияж',              bookings:108, revenue:86400,  share:34  },
+    ],
+    funnel: [
+      { stage:'Всего мастеров',    value:18, pct:100, color:'#D4608A' },
+      { stage:'Работают сегодня',  value:15, pct:83,  color:'#9B6FD4' },
+      { stage:'Записано на неделю',value:12, pct:67,  color:'#F5A623' },
+      { stage:'Свободны сейчас',   value:3,  pct:17,  color:'#1D9E75' },
+      { stage:'В отпуске',         value:1,  pct:6,   color:'#E05252' },
+    ],
+  },
+  '90d': {
+    kpi: {
+      revenue:   { value: 2640000, delta: 16.8 },
+      visits:    { value: 4218,    delta: 13.2 },
+      aov:       { value: 3080,    delta: 4.1  },
+      retention: { value: 73.8,    delta: 3.4  },
+    },
+    line: {
+      labels:  ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен'],
+      revenue: [240000,268000,310000,284000,360000,342000,388000,420000,428000],
+      visits:  [380,424,492,450,570,542,615,665,680],
+    },
+    donut: {
+      labels: ['Волосы','Маникюр/педикюр','Косметология','Макияж','Массаж/СПА'],
+      values: [35,26,20,12,7],
+    },
+    services: [
+      { name:'Окрашивание волос',         cat:'Волосы',              bookings:648,  revenue:777600,  share:100 },
+      { name:'Стрижка + укладка',         cat:'Волосы',              bookings:842,  revenue:589400,  share:76  },
+      { name:'Маникюр гель',              cat:'Ногти',               bookings:940,  revenue:470000,  share:60  },
+      { name:'Кератиновое выпрямление',   cat:'Уход за волосами',    bookings:384,  revenue:384000,  share:49  },
+      { name:'Макияж вечерний',           cat:'Макияж',              bookings:324,  revenue:259200,  share:33  },
+    ],
+    funnel: [
+      { stage:'Всего мастеров',    value:18, pct:100, color:'#D4608A' },
+      { stage:'Работают сегодня',  value:16, pct:89,  color:'#9B6FD4' },
+      { stage:'Записано на неделю',value:13, pct:72,  color:'#F5A623' },
+      { stage:'Свободны сейчас',   value:3,  pct:17,  color:'#1D9E75' },
+      { stage:'В отпуске',         value:1,  pct:6,   color:'#E05252' },
+    ],
+  },
+  '1y': {
+    kpi: {
+      revenue:   { value: 9840000, delta: 22.3 },
+      visits:    { value: 16480,   delta: 18.6 },
+      aov:       { value: 3140,    delta: 5.2  },
+      retention: { value: 76.4,    delta: 5.8  },
+    },
+    line: {
+      labels:  ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'],
+      revenue: [620000,580000,740000,710000,880000,840000,920000,980000,1040000,1120000,1180000,1230000],
+      visits:  [980,920,1170,1120,1390,1330,1460,1550,1640,1770,1860,1940],
+    },
+    donut: {
+      labels: ['Волосы','Маникюр/педикюр','Косметология','Макияж','Массаж/СПА'],
+      values: [34,27,21,11,7],
+    },
+    services: [
+      { name:'Окрашивание волос',         cat:'Волосы',              bookings:2520, revenue:3024000, share:100 },
+      { name:'Стрижка + укладка',         cat:'Волосы',              bookings:3280, revenue:2296000, share:76  },
+      { name:'Маникюр гель',              cat:'Ногти',               bookings:3640, revenue:1820000, share:60  },
+      { name:'Кератиновое выпрямление',   cat:'Уход за волосами',    bookings:1480, revenue:1480000, share:49  },
+      { name:'Макияж вечерний',           cat:'Макияж',              bookings:1260, revenue:1008000, share:33  },
+    ],
+    funnel: [
+      { stage:'Всего мастеров',    value:18, pct:100, color:'#D4608A' },
+      { stage:'Работают сегодня',  value:16, pct:89,  color:'#9B6FD4' },
+      { stage:'Записано на неделю',value:14, pct:78,  color:'#F5A623' },
+      { stage:'Свободны сейчас',   value:2,  pct:11,  color:'#1D9E75' },
+      { stage:'В отпуске',         value:1,  pct:6,   color:'#E05252' },
+    ],
+  },
+};
+
+const DATA = JSON.parse(JSON.stringify(DEFAULT_DATA));
+let currentPeriod = '30d';
+let lineChart = null, donutChart = null;
+const PERIOD_LABELS = {'7d':'7 дней','30d':'30 дней','90d':'90 дней','1y':'Год'};
+
+const fmtRub = n => {
+  if (n >= 1_000_000) return (n/1_000_000).toFixed(2) + ' млн ₽';
+  if (n >= 1_000)     return (n/1_000).toFixed(0) + ' тыс ₽';
+  return n.toLocaleString('ru-RU') + ' ₽';
+};
+const fmtNum = n => {
+  if (n >= 1_000_000) return (n/1_000_000).toFixed(1) + ' млн';
+  if (n >= 1_000)     return (n/1_000).toFixed(0) + ' тыс';
+  return n.toLocaleString('ru-RU');
+};
+const rankClass = i => ['gold','silver','bronze','',''][i] || '';
+const $ = id => document.getElementById(id);
+const num = id => parseFloat($(id).value) || 0;
+const int = id => parseInt($(id).value)   || 0;
+
+function renderKPI(d) {
+  const items = [
+    {id:'revenue',   val: fmtRub(d.revenue.value),               delta: d.revenue.delta},
+    {id:'visits',    val: d.visits.value.toLocaleString('ru-RU'), delta: d.visits.delta},
+    {id:'aov',       val: fmtRub(d.aov.value),                   delta: d.aov.delta},
+    {id:'retention', val: d.retention.value.toFixed(1) + '%',     delta: d.retention.delta},
+  ];
+  items.forEach(({id,val,delta}) => {
+    $(`kpi-${id}`).textContent = val;
+    const el = $(`kpi-${id}-delta`);
+    el.className = 'kpi-delta ' + (delta >= 0 ? 'up' : 'down');
+    $(`kpi-${id}-arrow`).textContent = delta >= 0 ? '▲' : '▼';
+    $(`kpi-${id}-pct`).textContent   = (delta >= 0 ? '+' : '') + delta.toFixed(1) + '%';
+  });
+}
+
+function renderLine(d) {
+  const ctx = $('lineChart').getContext('2d');
+  if (lineChart) lineChart.destroy();
+  lineChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: [
+        {label:'Выручка', data:d.revenue, borderColor:'#D4608A', backgroundColor:'rgba(212,96,138,.08)', borderWidth:2, pointRadius:3, pointHoverRadius:5, fill:true, tension:0.4, yAxisID:'y'},
+        {label:'Визиты',  data:d.visits,  borderColor:'#9B6FD4', backgroundColor:'rgba(155,111,212,.06)', borderWidth:2, pointRadius:3, pointHoverRadius:5, fill:true, tension:0.4, yAxisID:'y1'},
+      ],
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>ctx.datasetIndex===0?' Выручка: '+ctx.raw.toLocaleString('ru-RU')+' ₽':' Визиты: '+ctx.raw.toLocaleString('ru-RU')}},
+      },
+      scales:{
+        x:{grid:{color:'#F5EEF2'},ticks:{color:'#8A6A7A',font:{size:11}}},
+        y:{position:'left',grid:{color:'#F5EEF2'},ticks:{color:'#D4608A',font:{size:11},callback:v=>fmtNum(v)+' ₽'}},
+        y1:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#9B6FD4',font:{size:11},callback:v=>String(v)}},
+      },
+    },
+  });
+}
+
+function renderDonut(d) {
+  const ctx = $('donutChart').getContext('2d');
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(ctx, {
+    type:'doughnut',
+    data:{labels:d.labels,datasets:[{data:d.values,backgroundColor:['#D4608A','#9B6FD4','#F5A623','#1D9E75','#F28BAD'],borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{
+        legend:{position:'right',labels:{color:'#2D1B2E',font:{size:11},padding:10,boxWidth:10,boxHeight:10}},
+        tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.raw}%`}},
+      },
+    },
+  });
+}
+
+function renderTable(services) {
+  $('topTableBody').innerHTML = services.map((s,i) => `
+    <tr>
+      <td>
+        <span class="rank-badge ${rankClass(i)}">${i+1}</span>
+        <div style="display:inline-block;vertical-align:middle">
+          <div class="service-name">${s.name}</div>
+          <div class="service-cat">${s.cat}</div>
+        </div>
+      </td>
+      <td>${s.bookings.toLocaleString('ru-RU')}</td>
+      <td>${fmtRub(s.revenue)}</td>
+      <td>
+        <div class="progress-wrap">
+          <span style="font-size:12px;font-weight:600;color:var(--muted)">${s.share}%</span>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${s.share}%"></div></div>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderFunnel(funnel) {
+  $('funnelList').innerHTML = funnel.map(f => `
+    <div class="funnel-row">
+      <div class="funnel-meta">
+        <span class="funnel-stage">${f.stage}</span>
+        <span class="funnel-val">${f.value} чел. <span style="color:var(--muted);font-weight:400;font-size:11px">(${f.pct}%)</span></span>
+      </div>
+      <div class="funnel-bar-bg"><div class="funnel-bar-fill" style="width:${f.pct}%;background:${f.color}"></div></div>
+    </div>
+  `).join('');
+}
+
+function update(period) {
+  const d = DATA[period];
+  renderKPI(d.kpi);
+  renderLine(d.line);
+  renderDonut(d.donut);
+  renderTable(d.services);
+  renderFunnel(d.funnel);
+}
+
+function populateEditor(period) {
+  const d = DATA[period];
+  $('editorPeriodBadge').textContent = PERIOD_LABELS[period];
+
+  $('e-revenue').value         = d.kpi.revenue.value;
+  $('e-revenue-delta').value   = d.kpi.revenue.delta;
+  $('e-visits').value          = d.kpi.visits.value;
+  $('e-visits-delta').value    = d.kpi.visits.delta;
+  $('e-aov').value             = d.kpi.aov.value;
+  $('e-aov-delta').value       = d.kpi.aov.delta;
+  $('e-retention').value       = d.kpi.retention.value;
+  $('e-retention-delta').value = d.kpi.retention.delta;
+
+  d.donut.values.forEach((v,i) => $(`e-ch${i}`).value = v);
+
+  $('servicesEditor').innerHTML = d.services.map((s,i) => `
+    <div class="item-editor">
+      <div class="item-editor-title">#${i+1} Услуга</div>
+      <div class="field-row single">
+        <div class="field-group"><label class="field-label">Название</label>
+          <input class="field-input" id="e-s${i}-name" type="text" value="${s.name}">
+        </div>
+      </div>
+      <div class="field-row single">
+        <div class="field-group"><label class="field-label">Направление</label>
+          <input class="field-input" id="e-s${i}-cat" type="text" value="${s.cat}">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group"><label class="field-label">Записей (шт)</label>
+          <input class="field-input" id="e-s${i}-bookings" type="number" value="${s.bookings}">
+        </div>
+        <div class="field-group"><label class="field-label">Выручка (₽)</label>
+          <input class="field-input" id="e-s${i}-revenue" type="number" value="${s.revenue}">
+        </div>
+      </div>
+      <div class="field-row single">
+        <div class="field-group"><label class="field-label">Доля от топ-1 (%)</label>
+          <input class="field-input" id="e-s${i}-share" type="number" min="0" max="100" value="${s.share}">
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  $('funnelEditor').innerHTML = d.funnel.map((f,i) => `
+    <div class="item-editor">
+      <div class="item-editor-title">${f.stage}</div>
+      <div class="field-row">
+        <div class="field-group"><label class="field-label">Кол-во (чел.)</label>
+          <input class="field-input" id="e-f${i}-value" type="number" value="${f.value}">
+        </div>
+        <div class="field-group"><label class="field-label">% от общего</label>
+          <input class="field-input" id="e-f${i}-pct" type="number" step="0.1" value="${f.pct}">
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function applyEditor() {
+  const d = DATA[currentPeriod];
+  d.kpi.revenue.value   = num('e-revenue');
+  d.kpi.revenue.delta   = num('e-revenue-delta');
+  d.kpi.visits.value    = int('e-visits');
+  d.kpi.visits.delta    = num('e-visits-delta');
+  d.kpi.aov.value       = num('e-aov');
+  d.kpi.aov.delta       = num('e-aov-delta');
+  d.kpi.retention.value = num('e-retention');
+  d.kpi.retention.delta = num('e-retention-delta');
+  d.donut.values = [0,1,2,3,4].map(i => num(`e-ch${i}`));
+  d.services = d.services.map((s,i) => ({
+    name:     $(`e-s${i}-name`).value.trim() || s.name,
+    cat:      $(`e-s${i}-cat`).value.trim()  || s.cat,
+    bookings: int(`e-s${i}-bookings`),
+    revenue:  int(`e-s${i}-revenue`),
+    share:    int(`e-s${i}-share`),
+  }));
+  d.funnel = d.funnel.map((f,i) => ({
+    ...f,
+    value: int(`e-f${i}-value`),
+    pct:   num(`e-f${i}-pct`),
+  }));
+  update(currentPeriod);
+  closeEditor();
+  showToast('✓ Данные обновлены');
+}
+
+function resetEditor() {
+  Object.assign(DATA[currentPeriod], JSON.parse(JSON.stringify(DEFAULT_DATA[currentPeriod])));
+  populateEditor(currentPeriod);
+  update(currentPeriod);
+  showToast('↺ Данные сброшены');
+}
+
+function showToast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function openEditor() { populateEditor(currentPeriod); $('overlay').classList.add('open'); document.body.style.overflow='hidden'; }
+function closeEditor() { $('overlay').classList.remove('open'); document.body.style.overflow=''; }
+
+$('openEditor').addEventListener('click', openEditor);
+$('closeEditor').addEventListener('click', closeEditor);
+$('applyBtn').addEventListener('click', applyEditor);
+$('resetBtn').addEventListener('click', resetEditor);
+$('overlay').addEventListener('click', e => { if(e.target===$('overlay')) closeEditor(); });
+
+document.querySelectorAll('.period-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentPeriod = btn.dataset.period;
+    update(currentPeriod);
+  });
+});
+
+update(currentPeriod);
+</script>
+</body>
+</html>
